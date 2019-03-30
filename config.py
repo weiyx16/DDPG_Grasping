@@ -12,7 +12,6 @@ class DQNConfig(object):
         self.batch_size = 8
         self.cnn_format = 'NCHW'
         self.discount = 0.9 # epsilon in RL (decay index)
-        self.target_q_update_step = 1 * self.scale
         self.learning_rate = 0.001
         self.learning_rate_minimum = 0.00025
         self.learning_rate_decay = 0.96
@@ -24,14 +23,18 @@ class DQNConfig(object):
         self.ep_end_t = 2. * self.memory_size # encourage some new actions
 
         self.history_length = 4
-        self.train_frequency = 4
+        self.train_frequency = 1
         self.learn_start = 4. * self.scale
 
         self.test_step = 4 * self.scale
 
         # ----------- Environment Params
         self.env_name = 'Act_Perc'
+        # TODO: In fact: how to define our action ? this is the most important
         self.action_num = 2
+        self.action_max = [1, 1]
+        self.action_min = [-1, -1]
+
         self.Lua_PATH = r'../affordance_model/infer.lua'
         # In furthur case you can just use local infomation with 64*64 or 128*128 pixel.
         self.screen_width  = 128
@@ -46,7 +49,6 @@ class DQNConfig(object):
         # self.action_repeat = 4
         self.critic_ckpt_dir = r'./ddpg/checkpoint_critic'
         self.actor_ckpt_dir = r'./ddpg/checkpoint_actor'
-        self.model_dir = r'./ddpg/model'
         self.is_train = True
         self.is_sim = True
         self.end_metric = 0.85

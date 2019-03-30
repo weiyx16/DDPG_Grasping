@@ -1,11 +1,13 @@
+# Reference:
+# https://github.com/devsisters/DQN-tensorflow
 import numpy as np
 
 class History:
     def __init__(self, config):
         self.cnn_format = config.cnn_format
 
-        batch_size, history_length, self.inChannel, screen_height, screen_width = \
-            config.batch_size, config.history_length, config.inChannel, config.screen_height, config.screen_width
+        history_length, self.inChannel, screen_height, screen_width = \
+            config.history_length, config.inChannel, config.screen_height, config.screen_width
 
         self.history = np.zeros(
             [history_length*self.inChannel, screen_height, screen_width], dtype=np.float32)
@@ -19,6 +21,6 @@ class History:
 
     def get(self):
         if self.cnn_format == 'NHWC':
-            return np.transpose(self.history, (1, 2, 0)) # -> from 4 H W to H W 4
+            return np.transpose(self.history, (1, 2, 0)) # -> output H*W*(history_length*self.inChannel)
         else:
             return self.history

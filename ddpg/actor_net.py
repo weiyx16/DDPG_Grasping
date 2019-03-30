@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-    -- This module is for actor network of DDPG 
+    -- This module is for actor network of DDPG
+    -- From state -> directly output the action
 """
 
 import os
@@ -39,16 +40,16 @@ class ActorNet(BaseModel):
 
         with tf.variable_scope('step'):
             self.step_op = tf.Variable(0, trainable=False, name='step')
-            self.step_input = tf.placeholder('int32', None, name='step_input')
+            self.step_input = tf.placeholder(tf.int32, None, name='step_input')
             self.step_assign_op = self.step_op.assign(self.step_input)
         
         # Prediction Actor Network
         with tf.variable_scope('prediction'):
             if self.cnn_format == 'NHWC':
-                self.s_t = tf.placeholder('float32',
+                self.s_t = tf.placeholder(tf.float32,
                     [None, self.screen_height , self.screen_width, self.inChannel*self.history_length], name='s_t')
             else:
-                self.s_t = tf.placeholder('float32',
+                self.s_t = tf.placeholder(tf.float32,
                     [None, self.inChannel*self.history_length, self.screen_height, self.screen_width], name='s_t')
 
             # s_t = None*128*128*16(RGBD*4 previous frames)
@@ -83,10 +84,10 @@ class ActorNet(BaseModel):
         # The structure is the same with eval network
         with tf.variable_scope('target'):
             if self.cnn_format == 'NHWC':
-                self.target_s_t = tf.placeholder('float32',
+                self.target_s_t = tf.placeholder(tf.float32,
                     [None, self.screen_height , self.screen_width, self.inChannel*self.history_length], name='target_s_t')
             else:
-                self.target_s_t = tf.placeholder('float32',
+                self.target_s_t = tf.placeholder(tf.float32,
                     [None, self.inChannel*self.history_length, self.screen_height, self.screen_width], name='target_s_t')
 
             # s_t = None*128*128*16(RGBD*4 previous frames)
@@ -124,15 +125,15 @@ class ActorNet(BaseModel):
             self.t_w_assign_op = {}
 
             for name in self.w.keys():
-                self.t_w_input[name] = tf.placeholder('float32', self.target_w[name].get_shape().as_list(), name=name)
+                self.t_w_input[name] = tf.placeholder(tf.float32, self.target_w[name].get_shape().as_list(), name=name)
                 self.t_w_assign_op[name] = self.target_w[name].assign(self.t_w_input[name])
         print(' [*] Build Actor Weights Transform Scope')
 
         # optimizer
         with tf.variable_scope('optimizer'):
-            self.q_gradients_in = tf.placeholder('float32', [None, self.action_num], name = 'q_gradients')
+            self.q_gradients_in = tf.placeholder(tf.float32, [None, self.action_num], name = 'q_gradients')
             self.actor_parameters_gradients = tf.gradients(self.action, self.w, -self.q_gradients_in) # -self.q_gradients_in is initial value of actor_gradients
-            self.learning_rate_step = tf.placeholder('int64', None, name='learning_rate_step')
+            self.learning_rate_step = tf.placeholder(tf.int64, None, name='learning_rate_step')
             self.learning_rate_op = tf.maximum(self.learning_rate_minimum,
                 tf.train.exponential_decay(
                     self.learning_rate,
@@ -155,13 +156,13 @@ class ActorNet(BaseModel):
             self.summary_ops = {}
 
             for tag in scalar_summary_tags:
-                self.summary_placeholders[tag] = tf.placeholder('float32', None, name=tag.replace(' ', '_'))
+                self.summary_placeholders[tag] = tf.placeholder(tf.float32, None, name=tag.replace(' ', '_'))
                 self.summary_ops[tag]  = tf.summary.scalar("%s/%s" % (self.env_name, tag), self.summary_placeholders[tag])
 
             histogram_summary_tags = ['episode.rewards', 'episode.actions']
 
             for tag in histogram_summary_tags:
-                self.summary_placeholders[tag] = tf.placeholder('float32', None, name=tag.replace(' ', '_'))
+                self.summary_placeholders[tag] = tf.placeholder(tf.float32, None, name=tag.replace(' ', '_'))
                 self.summary_ops[tag]  = tf.summary.histogram(tag, self.summary_placeholders[tag])
 
             self.writer = tf.summary.FileWriter('./ddpg/actor_logs', self.sess.graph)
@@ -192,11 +193,11 @@ class ActorNet(BaseModel):
     def train_actor(self, state_batch, gradients_q_batch):
         self.sess.run(self.optim, feed_dict={self.s_t: state_batch, self.q_gradients_in: gradients_q_batch})
     
-    def evaluatet_actor(self, state_batch):
+    def evaluate_actor(self, state_batch):
         return self.sess.run(self.action, feed_dict={self.s_t:state_batch})
     
     def evaluate_target_actor(self, target_state_batch):
         return self.sess.run(self.target_action, feed_dict={self.target_s_t:target_state_batch})
 
-    def compute_Q_grdients_action(self, state_batch, action_batch):
-        return self.sess.run(self.action_gradients, feed_dict={self.s_t: state_batch, self.action_t: action_batch})
+    def step_cur(self):
+        return self.sess.run(self.step_op)

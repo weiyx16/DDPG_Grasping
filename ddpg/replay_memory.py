@@ -1,4 +1,7 @@
-"""Code from https://github.com/tambetm/simple_dqn/blob/master/src/replay_memory.py"""
+# -*- coding: utf-8 -*-
+#Reference:
+#https://github.com/tambetm/simple_dqn/blob/master/src/replay_memory.py
+
 import sys
 import os
 import random
@@ -16,7 +19,7 @@ class ReplayMemory:
         self.cnn_format = config.cnn_format
         self.inChannel = config.inChannel
         self.memory_size = config.memory_size
-        self.actions = np.empty(self.memory_size, dtype = np.uint8) # TODO:
+        self.actions = np.empty(self.memory_size, dtype = np.uint8)
         self.rewards = np.empty(self.memory_size, dtype = np.float16)
         self.screens = np.empty((self.memory_size, self.inChannel, config.screen_height // 4, config.screen_width // 4), dtype = np.float16)
         self.terminals = np.empty(self.memory_size, dtype = np.bool) # end or not

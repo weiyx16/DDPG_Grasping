@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-    -- This module is for critic network of DDPG 
+    -- This module is for critic network of DDPG
+    -- From state and action -> Q value
 """
 
 import os
@@ -39,19 +40,19 @@ class CriticNet(BaseModel):
 
         with tf.variable_scope('step'):
             self.step_op = tf.Variable(0, trainable=False, name='step')
-            self.step_input = tf.placeholder('int32', None, name='step_input')
+            self.step_input = tf.placeholder(tf.int32, None, name='step_input')
             self.step_assign_op = self.step_op.assign(self.step_input)
         
         # Prediction Critic Network
         with tf.variable_scope('prediction'):
             if self.cnn_format == 'NHWC':
-                self.s_t = tf.placeholder('float32',
+                self.s_t = tf.placeholder(tf.float32,
                     [None, self.screen_height , self.screen_width, self.inChannel*self.history_length], name='s_t')
             else:
-                self.s_t = tf.placeholder('float32',
+                self.s_t = tf.placeholder(tf.float32,
                     [None, self.inChannel*self.history_length, self.screen_height, self.screen_width], name='s_t')
             
-            self.action_t = tf.placeholder('float32', [None, self.action_num], name = 'action_t')
+            self.action_t = tf.placeholder(tf.float32, [None, self.action_num], name = 'action_t')
 
             # s_t = None*128*128*16(RGBD*4 previous frames)
             # downsample_1
@@ -85,13 +86,13 @@ class CriticNet(BaseModel):
         # The structure is the same with eval network
         with tf.variable_scope('target'):
             if self.cnn_format == 'NHWC':
-                self.target_s_t = tf.placeholder('float32',
+                self.target_s_t = tf.placeholder(tf.float32,
                     [None, self.screen_height , self.screen_width, self.inChannel*self.history_length], name='target_s_t')
             else:
-                self.target_s_t = tf.placeholder('float32',
+                self.target_s_t = tf.placeholder(tf.float32,
                     [None, self.inChannel*self.history_length, self.screen_height, self.screen_width], name='target_s_t')
             
-            self.target_action_t = tf.placeholder('float32', [None, self.action_num], name = 'target_action_t')
+            self.target_action_t = tf.placeholder(tf.float32, [None, self.action_num], name = 'target_action_t')
 
             # s_t = None*128*128*16(RGBD*4 previous frames)
             # downsample_1
@@ -128,16 +129,16 @@ class CriticNet(BaseModel):
             self.t_w_assign_op = {}
 
             for name in self.w.keys():
-                self.t_w_input[name] = tf.placeholder('float32', self.target_w[name].get_shape().as_list(), name=name)
+                self.t_w_input[name] = tf.placeholder(tf.float32, self.target_w[name].get_shape().as_list(), name=name)
                 self.t_w_assign_op[name] = self.target_w[name].assign(self.t_w_input[name])
         print(' [*] Build Critic Weights Transform Scope')
 
         # optimizer
         with tf.variable_scope('optimizer'):
-            self.q_in = tf.placeholder('float32', [None, 1], name = 'supervisor_q') # TODO: None or [None,1] & regularizer_loss?
+            self.q_in = tf.placeholder(tf.float32, [None, 1], name = 'supervisor_q') # TODO: None or [None,1] & regularizer_loss?
             self.delta = self.q_in - self.q
             self.loss = tf.reduce_mean(tf.pow(self.delta, 2), name = 'loss') #self.loss = tf.reduce_mean(clipped_error(self.delta), name='loss')
-            self.learning_rate_step = tf.placeholder('int64', None, name='learning_rate_step')
+            self.learning_rate_step = tf.placeholder(tf.int64, None, name='learning_rate_step')
             self.learning_rate_op = tf.maximum(self.learning_rate_minimum,
                 tf.train.exponential_decay(
                     self.learning_rate,
@@ -164,13 +165,13 @@ class CriticNet(BaseModel):
             self.summary_ops = {}
 
             for tag in scalar_summary_tags:
-                self.summary_placeholders[tag] = tf.placeholder('float32', None, name=tag.replace(' ', '_'))
+                self.summary_placeholders[tag] = tf.placeholder(tf.float32, None, name=tag.replace(' ', '_'))
                 self.summary_ops[tag]  = tf.summary.scalar("%s/%s" % (self.env_name, tag), self.summary_placeholders[tag])
 
             histogram_summary_tags = ['episode.rewards', 'episode.actions']
 
             for tag in histogram_summary_tags:
-                self.summary_placeholders[tag] = tf.placeholder('float32', None, name=tag.replace(' ', '_'))
+                self.summary_placeholders[tag] = tf.placeholder(tf.float32, None, name=tag.replace(' ', '_'))
                 self.summary_ops[tag]  = tf.summary.histogram(tag, self.summary_placeholders[tag])
 
             self.writer = tf.summary.FileWriter('./ddpg/critic_logs', self.sess.graph)
@@ -186,6 +187,7 @@ class CriticNet(BaseModel):
     def update_target_critic_network(self, is_initial = False):
         """
             Assign estimation network weights to target network. (not simultaneous)
+            TODO: is that ok to use eval function here?
         """
         if is_initial:
             for name in self.w.keys():
@@ -198,11 +200,14 @@ class CriticNet(BaseModel):
     """
         ############ Train and Evaluation ############
     """
-    def train_critic(self, state_batch, action_batch, super_q_batch):
-        self.sess.run(self.optim, feed_dict={self.s_t: state_batch, self.action_t: action_batch, self.q_in: super_q_batch})
+    def train_critic(self, state_batch, action_batch, target_q_batch):
+        return self.sess.run([self.optim, self.q, self.loss], feed_dict={self.s_t: state_batch, self.action_t: action_batch, self.q_in: target_q_batch})
 
     def evaluate_target_critic(self, target_state_batch, target_action_batch):
         return self.sess.run(self.target_q, feed_dict={self.target_s_t:target_state_batch, self.target_action_t:target_action_batch})
 
     def compute_Q_grdients_action(self, state_batch, action_batch):
         return self.sess.run(self.action_gradients, feed_dict={self.s_t: state_batch, self.action_t: action_batch})
+
+    def step_cur(self):
+        return self.sess.run(self.step_op)
