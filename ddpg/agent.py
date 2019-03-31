@@ -18,7 +18,6 @@ from .critic_net import CriticNet
 from .history import History
 from .replay_memory import ReplayMemory
 from tf_gradient_inverter import gradient_inverter
-from util.utils import *
 
 class Agent():
     def __init__(self, config, environment):
