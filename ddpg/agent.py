@@ -70,18 +70,11 @@ class Agent():
             self.observe(screen, reward, action, terminal)
             # 4. learn
             self.learn()
-
+            
             """
-            # TODO: 2019.3.30
-            # left things:
-            # 1. definition of the terminal of the scence
-            # 2. action definition
-            # 3. what to print out and what to inject to summary
-            # 4. how to restore and save both two network
-            # 5. the replay memory function need to be adapted to our new model
-            # 6. about the sess.run and .eval()
-            # 7. main function
-            # 8. debug with simulation 
+                -- Unsolved since 2019.3.31 (what to summary/save/print)
+                -- But actually they are not big problems.
+                train.function 内以下的内容暂未更新到ddpg版本
             """
             # 注意 ep_reward属于在每次simulation里的总和
             # 把每次simulation得到总reward存成list放在ep_rewards里，在test_step来的时候存下来
@@ -92,6 +85,7 @@ class Agent():
             if terminal:
                 terminal_times += 1
                 if terminal_times >= 5:
+                    # 如果一个场景里被移走的物品超过5个（原始11个）则认为场景没有再改变的必要，因此重新开始
                     # 注意！这个代码里训练部分没有epoch的概念，每次结束后，接着之前的step / memory 继续去尝试得到新的场景
                     # 所以才会出现memory中间有terminal的情况，在history_length周围有重新开始一次仿真的话，就不get这个sample
                     # 加上epoch（本质就是场景重新开始）也不能让step重置，也就是说初始的learn_start的step满足之后，就不会再回到learn_start的懵懂阶段了
@@ -178,10 +172,12 @@ class Agent():
         """
             -- According to the estimation result -> get the prediction action (or exploration instead)
         """
-        # TODO: How to add random strategy????
-
+        
         action = self.evaluate_actor(state_batch)
         action = action[0]
+
+        # TODO: How to add random strategy??
+        # Unfixed since 2019.3.31
 
         ep = test_ep or (self.ep_end + max(0., (self.ep_start - self.ep_end)
                 * (self.ep_end_t - max(0., self.step - self.learn_start)) / self.ep_end_t))
